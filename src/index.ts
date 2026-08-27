@@ -50,6 +50,16 @@ const PCSOSearchGame = {
 
 const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+const PCSOGameHours = {
+  Default: 21, // 9pm
+  [PCSOGame.Lotto_2D_2PM]: 14, // 2pm
+  [PCSOGame.Lotto_3D_2PM]: 14,
+  [PCSOGame.Lotto_2D_5PM]: 17, // 5pm
+  [PCSOGame.Lotto_3D_5PM]: 17,
+  [PCSOGame.Lotto_2D_9PM]: 21, // 9pm
+  [PCSOGame.Lotto_3D_9PM]: 21,
+};
+
 interface IOpts {
   from: Date;
   /** (default: "from" value) */
@@ -83,14 +93,14 @@ function extractHiddenInputValues(dom = prevDom) {
 
 function extractLottoResults(dom = prevDom) {
   try {
-    const formatVal = (i: number, v: string) => {
+    const formatVal = (i: number, v: string, item: IResultItem) => {
       switch (i) {
         case 0:
           return { game: PCSOGameByName[v as unknown as number] };
         case 1:
           return { combinations: v.split("-").map((n) => parseInt(n)) };
         case 2: 
-          return { drawDate: new Date(v) };
+          return { drawDate: new Date(new Date(v).setHours(PCSOGameHours[item.game as keyof typeof PCSOGameHours] ?? PCSOGameHours.Default)) };
         case 3: 
           return { jackpot: parseFloat(v.replace(/,/g, '')) };
         case 4: 
@@ -102,7 +112,7 @@ function extractLottoResults(dom = prevDom) {
     const label = dom.querySelector("#cphContainer_cpContent_lblError")?.textContent.trim();
     if (label == "Search Results") {
       const trs = dom.querySelectorAll("table.search-lotto-result-table tr").slice(1);
-      return trs.map((tr) => tr.querySelectorAll("td").reduce((item, td, i) => Object.assign(item, formatVal(i, td.textContent.trim())), {} as IResultItem));
+      return trs.map((tr) => tr.querySelectorAll("td").reduce((item, td, i) => Object.assign(item, formatVal(i, td.textContent.trim(), item)), {} as IResultItem));
     } else {
       if (label == "Data is unavailable.") {
         return [];
