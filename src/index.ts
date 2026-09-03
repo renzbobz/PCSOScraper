@@ -1,4 +1,5 @@
-import HTMLParser from "node-html-parser";
+import { parseDocument } from "htmlparser2";
+import { querySelectorAll, textContent } from "./helper.js";
 
 enum PCSOGame {
   UltraLotto,
@@ -80,12 +81,12 @@ export interface IResultItem {
   winners: number;
 }
 
-let prevDom: HTMLParser.HTMLElement;
+let prevDom: ReturnType<typeof parseDocument>;
 
 function extractHiddenInputValues(dom = prevDom) {
   try {
-    const els = dom.querySelectorAll('input[type="hidden"]');
-    return els.reduce((acc, el) => Object.assign(acc, { [el.getAttribute("name")!]: el.getAttribute("value") }), {} as Record<string, string>);
+    const els = querySelectorAll(dom, 'input').filter((el) => el.attribs["type"] === "hidden");
+    return els.reduce((acc, el) => Object.assign(acc, { [el.attribs["name"]]: el.attribs["value"] }), {} as Record<string, string>);
   } catch(cause) {
     throw new Error("[PCSOScraper.extractHiddenInputValues]", { cause });
   }
@@ -109,10 +110,11 @@ function extractLottoResults(dom = prevDom) {
           return {};
       }
     };
-    const label = dom.querySelector("#cphContainer_cpContent_lblError")?.textContent.trim();
+    const labelEl = querySelectorAll(dom, "#cphContainer_cpContent_lblError")?.at(0);
+    const label = labelEl ? textContent(labelEl) : "";
     if (label == "Search Results") {
-      const trs = dom.querySelectorAll("table.search-lotto-result-table tr").slice(1);
-      return trs.map((tr) => tr.querySelectorAll("td").reduce((item, td, i) => Object.assign(item, formatVal(i, td.textContent.trim(), item)), {} as IResultItem));
+      const trs = querySelectorAll(dom, "table.search-lotto-result-table tr").slice(1);
+      return trs.map((tr) => querySelectorAll(tr, "td").reduce((item, td, i) => Object.assign(item, formatVal(i, textContent(td), item)), {} as IResultItem));
     } else {
       if (label == "Data is unavailable.") {
         return [];
@@ -139,7 +141,7 @@ async function request({ payload, timeout, userAgent }: { userAgent: string; tim
     if (payload) config.body = payload;
     const res = await fetch(url, config);
     if (res.ok) {
-      prevDom = HTMLParser.parse(await res.text());
+      prevDom = parseDocument(await res.text());
     } else {
       throw new Error(res.status + ":" + res.statusText);
     }

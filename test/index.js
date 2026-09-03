@@ -1,4 +1,4 @@
 import PCSOScraper from "../dist/index.js";
 
-const r = await PCSOScraper.scrape({ from: new Date(2025, 1, 12), to: new Date(2025, 1, 16) });
+const r = await PCSOScraper.scrape({ from: new Date(2026, 1, 1) });
 console.log(r);
